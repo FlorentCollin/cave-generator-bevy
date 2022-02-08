@@ -19,6 +19,7 @@ impl Plugin for CaveGeneratorPlugin {
         app.insert_resource(Board::new())
             .add_startup_system(Board::spawn_cells)
             .add_startup_system(setup_camera)
+            .add_system(Board::update)
             .add_system(change_colors)
             .add_system(move_cell);
     }
@@ -83,9 +84,9 @@ fn move_cell(mut q: Query<(&Position, &mut Transform)>) {
         transform.translation = Vec3::new(
             position.x as f32 * CELL_SIZE - (CAVE_WIDTH as f32 / 2.0) * CELL_SIZE,
             position.y as f32 * CELL_SIZE - (CAVE_HEIGHT as f32 / 2.0) * CELL_SIZE,
-            0.0);
+            0.0,
+        );
     }
-
 }
 
 struct Board {
@@ -100,15 +101,53 @@ impl Board {
     pub fn spawn_cells(mut commands: Commands, mut board: ResMut<Board>) {
         for i in 0..CAVE_WIDTH {
             for j in 0..CAVE_HEIGHT {
-                let entity = spawn_cell(
-                    &mut commands,
-                    Position {
-                        x: i,
-                        y: j,
-                    },
-                );
+                let entity = spawn_cell(&mut commands, Position { x: i, y: j });
                 board.cells.push(entity);
             }
         }
+    }
+
+    pub fn update(board: Res<Board>, mut cells_states_query: Query<(&mut CellState, &Position)>) {
+        let cells_states: Vec<_> = board
+            .cells
+            .iter()
+            .map(|cell_entity| {
+                let (cell_state, _ ) = cells_states_query.get(*cell_entity).unwrap();
+                cell_state
+            })
+            .collect();
+
+        for (mut cell_state, position) in cells_states_query.iter_mut() {
+            let neighbors_alive_count = board.count_neighbors_alive(&cells_states, position);
+
+            cell_state.alive = if cell_state.alive {
+                neighbors_alive_count > 3
+            } else {
+                neighbors_alive_count > 4
+            };
+        }
+    }
+
+    fn count_neighbors_alive(
+        &self,
+        cells_states: &Vec<&CellState>,
+        position: &Position,
+    ) -> i32 {
+        // count the number of neighbors alive
+        let mut neighbors_alive_count = 0;
+        for i in -1..2 {
+            for j in -1..2 {
+                if i == 0 && j == 0 {
+                    continue;
+                }
+                let index = (position.y + j) * CAVE_WIDTH + (position.x + i);
+                if let Some(cell_state) = cells_states.get(index as usize) {
+                    if cell_state.alive {
+                        neighbors_alive_count += 1;
+                    }
+                }
+            }
+        }
+        neighbors_alive_count
     }
 }
