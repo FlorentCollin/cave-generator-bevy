@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use rand::random;
 
-const CAVE_WIDTH: i32 = 50;
-const CAVE_HEIGHT: i32 = 50;
+const CAVE_WIDTH: i32 = 80;
+const CAVE_HEIGHT: i32 = 80;
 const CELL_SIZE: f32 = 10.0;
 
 fn main() {
@@ -21,7 +21,8 @@ impl Plugin for CaveGeneratorPlugin {
             .add_startup_system(setup_camera)
             .add_system(Board::update)
             .add_system(change_colors)
-            .add_system(move_cell);
+            .add_system(move_cell)
+            .add_system(restart);
     }
 }
 
@@ -149,5 +150,18 @@ impl Board {
             }
         }
         neighbors_alive_count
+    }
+}
+
+fn restart(
+    keyboard_input: Res<Input<KeyCode>>,
+    mouse_input: Res<Input<MouseButton>>,
+    mut cell_states_query: Query<&mut CellState>,
+) {
+    // restart the simulation
+    if keyboard_input.pressed(KeyCode::R) || mouse_input.pressed(MouseButton::Left) {
+        for mut cell_state in cell_states_query.iter_mut() {
+            *cell_state = CellState::default();
+        }
     }
 }
