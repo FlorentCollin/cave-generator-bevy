@@ -16,10 +16,10 @@ struct CaveGeneratorPlugin;
 
 impl Plugin for CaveGeneratorPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(Board::new())
-            .add_startup_system(Board::spawn_cells)
+        app.insert_resource(Grid::new())
+            .add_startup_system(Grid::spawn_cells)
             .add_startup_system(setup_camera)
-            .add_system(Board::update)
+            .add_system(Grid::update)
             .add_system(change_colors)
             .add_system(move_cell)
             .add_system(restart);
@@ -90,26 +90,26 @@ fn move_cell(mut q: Query<(&Position, &mut Transform)>) {
     }
 }
 
-struct Board {
+struct Grid {
     cells: Vec<Entity>,
 }
 
-impl Board {
+impl Grid {
     pub fn new() -> Self {
         Self { cells: vec![] }
     }
 
-    pub fn spawn_cells(mut commands: Commands, mut board: ResMut<Board>) {
+    pub fn spawn_cells(mut commands: Commands, mut grid: ResMut<Grid>) {
         for i in 0..CAVE_WIDTH {
             for j in 0..CAVE_HEIGHT {
                 let entity = spawn_cell(&mut commands, Position { x: i, y: j });
-                board.cells.push(entity);
+                grid.cells.push(entity);
             }
         }
     }
 
-    pub fn update(board: Res<Board>, mut cells_states_query: Query<(&mut CellState, &Position)>) {
-        let cells_states: Vec<_> = board
+    pub fn update(grid: Res<Grid>, mut cells_states_query: Query<(&mut CellState, &Position)>) {
+        let cells_states: Vec<_> = grid
             .cells
             .iter()
             .map(|cell_entity| {
@@ -119,7 +119,7 @@ impl Board {
             .collect();
 
         for (mut cell_state, position) in cells_states_query.iter_mut() {
-            let neighbors_alive_count = board.count_neighbors_alive(&cells_states, position);
+            let neighbors_alive_count = grid.count_neighbors_alive(&cells_states, position);
 
             cell_state.alive = if cell_state.alive {
                 neighbors_alive_count > 3
